@@ -230,7 +230,7 @@ Quando o envio falha, o sistema tenta de novo até um limite e depois separa o e
 
 **Fluxo principal**
 - Depois de uma falha, o sistema agenda nova tentativa com intervalos de 1 minuto, 5 minutos, 30 minutos, 2 horas e 12 horas.
-- São 5 tentativas no total, cobrindo cerca de 15 horas.
+- São 5 novas tentativas depois da primeira falha, cobrindo cerca de 15 horas.
 - Ao esgotar as tentativas, o evento é considerado falha permanente e movido para a fila de falhas (DLQ), com o conteúdo, o motivo e o horário da falha.
 
 **Fluxos alternativos e exceções**
@@ -493,7 +493,7 @@ Checklist objetivo que define se a feature está pronta.
 
 - `PRD-CA-01` Uma mudança de status com webhook interessado registra o evento na mesma transação. Se o registro falhar, a mudança de status é desfeita.
 - `PRD-CA-02` Uma mudança para um status que nenhum webhook do cliente escolheu não gera evento.
-- `PRD-CA-03` O processo de envio roda separado da API e lê os eventos pendentes a cada 2 segundos. A primeira tentativa de envio acontece em menos de 10 segundos depois da mudança de status.
+- `PRD-CA-03` O processo de envio roda separado da API e lê os eventos pendentes a cada 2 segundos. A primeira tentativa de envio acontece em menos de 10 segundos depois da mudança de status. A exceção é o evento que espera a entrega de um evento anterior do mesmo pedido, porque a ordem por pedido é garantida.
 - `PRD-CA-04` Todo envio é assinado com HMAC-SHA256 usando a secret do webhook e informa o identificador do evento, o identificador do webhook e o horário do envio.
 - `PRD-CA-05` O cadastro ou a edição com endereço http é recusado com erro de validação.
 - `PRD-CA-06` Um evento acima de 64KB não é enviado e gera erro.

@@ -1,6 +1,6 @@
 # Tracker de rastreabilidade
 
-Esta tabela liga cada item dos design docs à origem dele: uma fala da reunião (`TRANSCRICAO.md`) ou um arquivo do código existente. Os IDs são os mesmos que aparecem nos documentos. Os próximos documentos (ADRs, RFC e FDD) vão acrescentar linhas a esta mesma tabela.
+Esta tabela liga cada item dos design docs à origem dele: uma fala da reunião (`TRANSCRICAO.md`) ou um arquivo do código existente. Os IDs são os mesmos que aparecem nos documentos. A tabela cobre o PRD, os ADRs, a RFC e o FDD, nessa ordem.
 
 | ID | Documento | Tipo | Conteúdo (resumo) | Fonte | Localização |
 | --- | --- | --- | --- | --- | --- |
@@ -121,7 +121,7 @@ Esta tabela liga cada item dos design docs à origem dele: uma fala da reunião 
 | PRD-RISCO-07 | docs/PRD.md | Risco | Perder a Atlas por atraso na entrega | TRANSCRICAO | [09:00] Marcos |
 | PRD-CA-01 | docs/PRD.md | Critério de Aceitação | Evento na mesma transação; falha no registro desfaz a mudança | TRANSCRICAO | [09:40] Bruno |
 | PRD-CA-02 | docs/PRD.md | Critério de Aceitação | Status sem webhook interessado não gera evento | TRANSCRICAO | [09:34] Bruno |
-| PRD-CA-03 | docs/PRD.md | Critério de Aceitação | Processo separado, polling de 2 s, primeira tentativa em menos de 10 s | TRANSCRICAO | [09:10] Larissa; [09:02] Marcos |
+| PRD-CA-03 | docs/PRD.md | Critério de Aceitação | Processo separado, polling de 2 s, primeira tentativa em menos de 10 s, exceto evento que espera outro do mesmo pedido | TRANSCRICAO | [09:10] Larissa; [09:02] Marcos |
 | PRD-CA-04 | docs/PRD.md | Critério de Aceitação | Envio assinado com HMAC-SHA256, com identificadores e horário | TRANSCRICAO | [09:22] Sofia; [09:44] Diego |
 | PRD-CA-05 | docs/PRD.md | Critério de Aceitação | Endereço http recusado com erro de validação | TRANSCRICAO | [09:23] Sofia |
 | PRD-CA-06 | docs/PRD.md | Critério de Aceitação | Evento acima de 64KB não é enviado e gera erro | TRANSCRICAO | [09:24] Larissa |
