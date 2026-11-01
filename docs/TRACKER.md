@@ -90,7 +90,7 @@ Esta tabela liga cada item dos design docs à origem dele: uma fala da reunião 
 | PRD-RNF-28 | docs/PRD.md | Requisito Não Funcional | Códigos de erro com prefixo WEBHOOK_ | TRANSCRICAO | [09:29] Larissa |
 | PRD-ARQ-01 | docs/PRD.md | Arquitetura | Envio assíncrono com padrão outbox no banco existente | TRANSCRICAO | [09:08] Larissa; [09:06] Diego |
 | PRD-ARQ-02 | docs/PRD.md | Arquitetura | Módulo de webhooks no mesmo padrão dos outros módulos | TRANSCRICAO | [09:27] Bruno |
-| PRD-ARQ-03 | docs/PRD.md | Arquitetura | Padrão de módulos existente, tendo o módulo de pedidos como referência | CODIGO | src/modules/orders |
+| PRD-ARQ-03 | docs/PRD.md | Arquitetura | Padrão de módulos existente, tendo o módulo de pedidos como referência | CODIGO | src/modules/orders/order.routes.ts |
 | PRD-ARQ-04 | docs/PRD.md | Arquitetura | Outbox de eventos pendentes gravada junto com a mudança de status | TRANSCRICAO | [09:06] Diego |
 | PRD-ARQ-05 | docs/PRD.md | Arquitetura | Processo de envio separado da API, em polling | TRANSCRICAO | [09:11] Diego; [09:09] Diego |
 | PRD-ARQ-06 | docs/PRD.md | Arquitetura | DLQ separada dos eventos pendentes | TRANSCRICAO | [09:18] Diego |
@@ -238,3 +238,53 @@ Esta tabela liga cada item dos design docs à origem dele: uma fala da reunião 
 | ADR-007-POS-01 | docs/adrs/ADR-007-snapshot-do-payload-na-insercao.md | Consequência Positiva | Evento reflete o pedido no momento da mudança | TRANSCRICAO | [09:52] Larissa |
 | ADR-007-POS-02 | docs/adrs/ADR-007-snapshot-do-payload-na-insercao.md | Consequência Positiva | Replay da DLQ reenvia o mesmo conteúdo | TRANSCRICAO | [09:18] Diego |
 | ADR-007-NEG-01 | docs/adrs/ADR-007-snapshot-do-payload-na-insercao.md | Consequência inferida | Cada linha guarda o payload completo; outbox cresce mais | TRANSCRICAO | [09:52] Larissa |
+| RFC-CTX-01 | docs/RFC.md | Contexto | Aplicação sem notificação externa; clientes consultam a API de tempos em tempos | TRANSCRICAO | [09:00] Marcos |
+| RFC-CTX-02 | docs/RFC.md | Contexto | changeStatus já atualiza pedido, histórico e estoque numa transação | CODIGO | src/modules/orders/order.service.ts |
+| RFC-CTX-03 | docs/RFC.md | Contexto | Mudança de status não pode esperar o cliente nem ser desfeita por ele | TRANSCRICAO | [09:04] Bruno |
+| RFC-CTX-04 | docs/RFC.md | Contexto | Time pequeno | TRANSCRICAO | [09:07] Diego |
+| RFC-CTX-05 | docs/RFC.md | Contexto | Infraestrutura nova seria overengineering; MySQL existente resolve | TRANSCRICAO | [09:07] Diego |
+| RFC-PROP-01 | docs/RFC.md | Proposta | Captura: evento gravado na transação, com rollback, filtro na inserção e snapshot | TRANSCRICAO | [09:40] Bruno; [09:34] Bruno |
+| RFC-PROP-02 | docs/RFC.md | Proposta | Entrega: worker separado em polling de 2 s, HMAC, identificador, 5 tentativas e dead letter | TRANSCRICAO | [09:11] Diego; [09:09] Diego |
+| RFC-PROP-03 | docs/RFC.md | Proposta | Gestão: módulo no padrão do projeto, CRUD autenticado, rotação, histórico e replay ADMIN | TRANSCRICAO | [09:30] Larissa; [09:36] Larissa |
+| RFC-PROP-04 | docs/RFC.md | Garantia | Atomicidade entre mudança de status e evento | TRANSCRICAO | [09:06] Diego |
+| RFC-PROP-05 | docs/RFC.md | Garantia | Evento reflete o pedido no momento da mudança | TRANSCRICAO | [09:52] Larissa |
+| RFC-PROP-06 | docs/RFC.md | Garantia | At-least-once, sem exactly-once; cliente deduplica pelo identificador | TRANSCRICAO | [09:25] Diego; [09:24] Diego |
+| RFC-PROP-07 | docs/RFC.md | Limitação | Sem ordem global; só por pedido e com um único worker | TRANSCRICAO | [09:13] Larissa |
+| RFC-PROP-08 | docs/RFC.md | Limitação | Evento pode esperar até 2 s para ser pego | TRANSCRICAO | [09:10] Larissa |
+| RFC-PROP-09 | docs/RFC.md | Limitação | Após cerca de 15 h de falhas, só replay manual | TRANSCRICAO | [09:17] Diego; [09:18] Diego |
+| RFC-ALT-01 | docs/RFC.md | Alternativa Descartada | Disparo síncrono na mudança de status | TRANSCRICAO | [09:04] Bruno; [09:03] Larissa |
+| RFC-ALT-02 | docs/RFC.md | Alternativa Descartada | Fila em infraestrutura nova (Redis Streams) | TRANSCRICAO | [09:07] Diego; [09:07] Larissa |
+| RFC-ALT-03 | docs/RFC.md | Alternativa Descartada | Trigger no banco para acordar o worker | TRANSCRICAO | [09:09] Diego; [09:09] Bruno |
+| RFC-ALT-04 | docs/RFC.md | Alternativa Descartada | Worker dentro do processo da API | TRANSCRICAO | [09:11] Diego |
+| RFC-ALT-05 | docs/RFC.md | Alternativa Descartada | Entrega exactly-once | TRANSCRICAO | [09:25] Diego |
+| RFC-ALT-06 | docs/RFC.md | Alternativa Descartada | Montar o payload só no envio | TRANSCRICAO | [09:52] Larissa; [09:51] Bruno |
+| RFC-QA-01 | docs/RFC.md | Questão em Aberto | Rate limiting de saída: observar e decidir depois | TRANSCRICAO | [09:39] Larissa; [09:38] Diego |
+| RFC-QA-02 | docs/RFC.md | Questão em Aberto | Escalar para vários workers: particionar por pedido ou lock pessimista | TRANSCRICAO | [09:13] Diego; [09:13] Bruno |
+| RFC-QA-03 | docs/RFC.md | Questão em Aberto | Aviso por e-mail adiado até medir o impacto | TRANSCRICAO | [09:37] Larissa; [09:37] Marcos |
+| RFC-QA-04 | docs/RFC.md | Questão em Aberto | Arquivamento dos eventos entregues fora do escopo | TRANSCRICAO | [09:08] Diego |
+| RFC-QA-05 | docs/RFC.md | Questão em Aberto | Restringir quem gerencia webhooks fica para depois | TRANSCRICAO | [09:37] Sofia; [09:36] Marcos |
+| RFC-LAC-01 | docs/RFC.md | Lacuna | Destino do evento acima de 64KB não definido (PRD-FR-07) | TRANSCRICAO | [09:24] Larissa |
+| RFC-LAC-02 | docs/RFC.md | Lacuna | Respostas que contam como falha além do timeout não definidas (PRD-FR-08) | TRANSCRICAO | [09:42] Diego |
+| RFC-IMP-01 | docs/RFC.md | Impacto | changeStatus ganha a gravação do evento na transação existente | CODIGO | src/modules/orders/order.service.ts |
+| RFC-IMP-02 | docs/RFC.md | Impacto | server.ts segue como entrada da API; worker vira nova entrada | CODIGO | src/server.ts |
+| RFC-IMP-03 | docs/RFC.md | Impacto | Worker cria o próprio Prisma Client no mesmo banco | CODIGO | src/config/database.ts |
+| RFC-IMP-04 | docs/RFC.md | Impacto | AppError e error middleware reaproveitados sem mudança | CODIGO | src/shared/errors/app-error.ts |
+| RFC-IMP-05 | docs/RFC.md | Impacto | authenticate e requireRole sem mudança; token sem cliente | CODIGO | src/middlewares/auth.middleware.ts |
+| RFC-IMP-06 | docs/RFC.md | Impacto | Logger Pino existente atende módulo e worker | CODIGO | src/shared/logger/index.ts |
+| RFC-IMP-07 | docs/RFC.md | Impacto | Schema ganha modelos de outbox, dead letter e configuração | CODIGO | prisma/schema.prisma |
+| RFC-IMP-08 | docs/RFC.md | Impacto | Rotas do módulo novo entram no buildApiRouter | CODIGO | src/routes/index.ts |
+| RFC-IMP-09 | docs/RFC.md | Impacto | Máquina de estados do pedido não muda | CODIGO | src/modules/orders/order.status.ts |
+| RFC-RISCO-01 | docs/RFC.md | Risco | Status muda sem evento; mitigado pela mesma transação e testes ponta a ponta | TRANSCRICAO | [09:40] Bruno; [09:46] Larissa |
+| RFC-RISCO-02 | docs/RFC.md | Risco | Falha na outbox desfaz mudança válida; mitigação não definida | TRANSCRICAO | [09:40] Bruno |
+| RFC-RISCO-03 | docs/RFC.md | Risco | Perda de ordem ao escalar; worker único com limitação documentada | TRANSCRICAO | [09:13] Larissa; [09:12] Diego |
+| RFC-RISCO-04 | docs/RFC.md | Risco | Outbox grande deixa o worker lento; leitura só dos pendentes em lote pequeno | TRANSCRICAO | [09:07] Bruno; [09:08] Diego |
+| RFC-RISCO-05 | docs/RFC.md | Risco | Cliente lento ou fora do ar; timeout de 10 s, retry e dead letter | TRANSCRICAO | [09:42] Diego; [09:17] Larissa |
+| RFC-RISCO-06 | docs/RFC.md | Risco | Evento duplicado; identificador por evento e destaque no portal | TRANSCRICAO | [09:25] Diego; [09:26] Marcos |
+| RFC-RISCO-07 | docs/RFC.md | Risco | Vazamento de secret; secret por endpoint, rotação e revisão de segurança | TRANSCRICAO | [09:21] Sofia; [09:46] Sofia |
+| RFC-DEC-01 | docs/RFC.md | Decisão | Link para ADR-001: outbox no MySQL na transação da mudança | TRANSCRICAO | [09:08] Larissa; [09:40] Bruno |
+| RFC-DEC-02 | docs/RFC.md | Decisão | Link para ADR-002: worker separado com polling de 2 s | TRANSCRICAO | [09:10] Larissa; [09:11] Diego |
+| RFC-DEC-03 | docs/RFC.md | Decisão | Link para ADR-003: 5 tentativas, dead letter e replay manual | TRANSCRICAO | [09:17] Larissa; [09:18] Diego |
+| RFC-DEC-04 | docs/RFC.md | Decisão | Link para ADR-004: HMAC-SHA256, secret por endpoint, rotação de 24 h | TRANSCRICAO | [09:22] Sofia |
+| RFC-DEC-05 | docs/RFC.md | Decisão | Link para ADR-005: at-least-once com identificador por evento | TRANSCRICAO | [09:26] Larissa |
+| RFC-DEC-06 | docs/RFC.md | Decisão | Link para ADR-006: módulo no padrão do projeto | TRANSCRICAO | [09:30] Larissa; [09:36] Larissa |
+| RFC-DEC-07 | docs/RFC.md | Decisão | Link para ADR-007: payload montado na inserção | TRANSCRICAO | [09:52] Larissa; [09:52] Bruno |
