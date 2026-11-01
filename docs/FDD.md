@@ -9,7 +9,7 @@ Documentos relacionados: [PRD](./PRD.md) · [RFC](./RFC.md) · [Índice de ADRs]
 Convenção deste documento. Cada informação está em uma de três categorias:
 - **Decidido na reunião:** texto normal, com citação `[hh:mm] Nome`.
 - **Padrão do código:** texto normal, citando o arquivo.
-- **Hipótese de implementação:** marcada com **(hipótese)** e um ID `FDD-HIP-NN`. Todas as hipóteses estão listadas em "Suposições e restrições", na seção 1. Foram adotadas na sessão de revisão registrada em `processo/entrevista-fdd.md`, com a usuária delegando as escolhas às opções recomendadas ("segue direto, decide você"). Os detalhamentos feitos durante a verificação independente estão listados no mesmo log.
+- **Hipótese de implementação:** marcada com **(hipótese)** e um ID `FDD-HIP-NN`. Todas as hipóteses estão listadas em "Suposições e restrições", na seção 1. Foram adotadas numa sessão de revisão técnica, com as opções recomendadas. Os detalhamentos feitos na verificação independente já estão incorporados às próprias hipóteses.
 
 ---
 
@@ -28,7 +28,7 @@ Convenção deste documento. Cada informação está em uma de três categorias:
   - at-least-once: [ADR-005](./adrs/ADR-005-entrega-at-least-once-com-x-event-id.md);
   - reuso de padrões: [ADR-006](./adrs/ADR-006-reuso-dos-padroes-do-projeto.md);
   - snapshot: [ADR-007](./adrs/ADR-007-snapshot-do-payload-na-insercao.md).
-- `FDD-CTX-04` Dois processos, um banco. A API (`src/server.ts`) grava o evento. O worker (`src/worker.ts`, novo) lê e envia. Os dois usam o mesmo MySQL e a mesma stack, mas não o mesmo processo ([09:11] Diego), cada um com a própria instância de `PrismaClient` ([09:30] Bruno).
+- `FDD-CTX-04` Dois processos, um banco. A API (`src/server.ts`) grava o evento. O worker, `src/worker.ts` (a criar), lê e envia. Os dois usam o mesmo MySQL e a mesma stack, mas não o mesmo processo ([09:11] Diego), cada um com a própria instância de `PrismaClient` ([09:30] Bruno).
 
 **Atores**
 
@@ -47,7 +47,7 @@ Hipóteses de implementação (todas **(hipótese)**):
 
 | ID | Hipótese | Âncora |
 | --- | --- | --- |
-| `FDD-HIP-01` | As "5 tentativas" são 5 retentativas depois da primeira falha: até 6 chamadas HTTP por evento, com espera de 1m, 5m, 30m, 2h e 12h após cada falha. São 14h36m entre a primeira falha e a última tentativa, o que fecha com as "quase 15 horas". **Conflito a confirmar:** `PRD-FR-08` e `PRD-CA-08` dizem "5 tentativas no total", e `RFC-PROP-02` e ADR-003 dizem "5 tentativas" com os mesmos 5 intervalos. Esses textos não fecham com as 15 horas. Este FDD adota a leitura de 6 chamadas, que foi a recomendada na sessão de revisão. O resumo de [09:48] Larissa ("total 5 tentativas") é lido como 5 retentativas, porque traz os mesmos 5 intervalos. A divergência de redação com os outros documentos fica registrada para correção | [09:17] Diego; [09:48] Larissa |
+| `FDD-HIP-01` | As "5 tentativas" são 5 retentativas depois da primeira falha: até 6 chamadas HTTP por evento, com espera de 1m, 5m, 30m, 2h e 12h após cada falha. São 14h36m entre a primeira falha e a última tentativa, o que fecha com as "quase 15 horas". Leitura confirmada e alinhada com o [PRD-FR-08](./PRD.md#prd-fr-08-retentar-com-intervalo-crescente-e-separar-falhas-permanentes), que fala em 5 novas tentativas depois da primeira falha. O resumo de [09:48] Larissa ("total 5 tentativas") e o ADR-003 trazem os mesmos 5 intervalos e são lidos do mesmo jeito | [09:17] Diego; [09:48] Larissa |
 | `FDD-HIP-02` | `X-Signature` traz uma lista `sha256=<hex>`: a assinatura com a secret atual primeiro, seguida de uma para cada secret anterior ainda dentro das suas 24 h. O cliente aceita se qualquer uma bater | [09:21] Sofia |
 | `FDD-HIP-03` | Uma linha de outbox por webhook interessado. Cada linha tem `eventId` próprio (UUID), gerado na inserção | [09:25] Diego |
 | `FDD-HIP-04` | `customer_id` no path: criação e listagem em `/api/v1/customers/:customerId/webhooks`; as demais operações em `/api/v1/webhooks/:id` | [09:32] Larissa |
@@ -60,19 +60,19 @@ Hipóteses de implementação (todas **(hipótese)**):
 | `FDD-HIP-11` | Histórico em tabela própria, com uma linha por tentativa HTTP: `outboxId`, `eventId`, `attempt`, `startedAt` (início da chamada), `durationMs`, `statusCode`, `requestBody`, `responseBody` até 64KB (`MediumText`), o indicador `responseBodyTruncated` e `error` | [09:34] Marcos |
 | `FDD-HIP-12` | `WEBHOOK_SECRET_REQUIRED` não é usado, porque a secret é gerada pela plataforma. Os schemas do POST e do PATCH usam `.strict()`, então um campo `secret` ou desconhecido é recusado com `VALIDATION_ERROR`. `events` exige pelo menos um status, e o PATCH exige pelo menos um campo | [09:31] Marcos |
 | `FDD-HIP-13` | Classes de erro novas em `src/shared/errors/http-errors.ts`, no molde de `InvalidStatusTransitionError`, com os códigos `WEBHOOK_NOT_FOUND`, `WEBHOOK_INVALID_URL`, `WEBHOOK_DEAD_LETTER_NOT_FOUND` e `WEBHOOK_DEAD_LETTER_ALREADY_REPLAYED`. A exigência de https é validada por um schema Zod de URL executado no service, que lança `WebhookInvalidUrlError` | `src/shared/errors/http-errors.ts` |
-| `FDD-HIP-14` | Para a revisão de segurança: a secret é gerada com `crypto.randomBytes(32)` em hex e guardada cifrada com AES-256-GCM, com a chave `WEBHOOK_SECRET_ENCRYPTION_KEY` (obrigatória, 64 caracteres hex) no `envSchema`, usada pela API e pelo worker. Os campos de secret entram no `redactPaths`. A secret só aparece nas respostas de criação e de rotação. As funções ficam em `webhook.signature.ts`. O texto cifrado é gravado como `base64(iv):base64(authTag):base64(ciphertext)`, com IV de 12 bytes. A rotação da chave de cifra não foi definida | [09:22] Diego; [09:46] Sofia |
+| `FDD-HIP-14` | Para a revisão de segurança: a secret é gerada com `crypto.randomBytes(32)` em hex e guardada cifrada com AES-256-GCM, com a chave `WEBHOOK_SECRET_ENCRYPTION_KEY` (obrigatória, 64 caracteres hex) no `envSchema`, usada pela API e pelo worker. Os campos de secret entram no `redactPaths`. A secret só aparece nas respostas de criação e de rotação. As funções ficam em `src/modules/webhooks/webhook.signature.ts` (a criar). O texto cifrado é gravado como `base64(iv):base64(authTag):base64(ciphertext)`, com IV de 12 bytes. A rotação da chave de cifra não foi definida | [09:22] Diego; [09:46] Sofia |
 | `FDD-HIP-15` | Métricas calculadas a partir das tabelas novas e de um log periódico `webhook_worker_stats`, com janelas de uma hora. Painel e alertas com os limiares do `FDD-OBS-12`. Tracing por correlação de `eventId`, `webhookId`, `orderId` e `requestId`. O worker loga com `logger.child({ component: 'webhook-worker' })` | [09:29] Bruno |
 | `FDD-HIP-16` | O worker expõe `processBatch(now: Date)` para testes: o horário é calculado em JS e passado para as consultas, e o teste injeta o relógio. O envio HTTP é feito por uma função `send` injetável (padrão: `fetch` global), que os testes substituem por um stub. Assim o webhook é cadastrado pela API com uma URL https fictícia, e nenhum servidor TLS local é necessário. O `tests/setup.ts` apaga as tabelas novas explicitamente, antes de `customers` | `tests/setup.ts` |
 | `FDD-HIP-17` | Modelo de dados: nomes de tabela e de coluna e tipos não citados na reunião. Outbox, DLQ e entregas guardam `orderId` sem FK para `orders`. O webhook tem FK com cascade para `customers`. As tabelas de eventos têm FK com cascade para `webhooks`. A remoção de webhook é definitiva (hard delete). Se o webhook for apagado durante um envio, os erros `P2003` ou `P2025` nas gravações finais são tratados como descarte | `prisma/schema.prisma` |
 | `FDD-HIP-18` | A criação de pedido não gera evento. Só o `changeStatus` gera | [09:40] Bruno |
 | `FDD-HIP-19` | O PATCH aceita `active`. Webhook inativo não recebe eventos novos; os já gravados seguem a entrega | [09:21] Bruno |
 | `FDD-HIP-20` | `X-Timestamp` em ISO 8601 UTC, com o horário do envio, fora da assinatura. Como a assinatura é só do corpo, o header sozinho não protege contra reenvio malicioso. O `timestamp` do payload, que é assinado, e o `event_id` é que permitem ao cliente detectar replay. Ponto para a revisão da Sofia | [09:44] Diego |
-| `FDD-HIP-21` | Polling em intervalo fixo de 2 s, que não espera os envios em andamento, com até 10 envios simultâneos. Os parâmetros são constantes do módulo. A lógica fica em `src/modules/webhooks/webhook.worker.ts`, com os scripts `worker` e `dev:worker` | [09:09] Diego; [09:28] Bruno |
+| `FDD-HIP-21` | Polling em intervalo fixo de 2 s, que não espera os envios em andamento, com até 10 envios simultâneos. Os parâmetros são constantes do módulo. A lógica fica em `src/modules/webhooks/webhook.worker.ts` (a criar), com os scripts `worker` e `dev:worker` | [09:09] Diego; [09:28] Bruno |
 | `FDD-HIP-22` | HTTP com o `fetch` nativo do Node 20 e `AbortSignal.timeout(10000)`. HMAC, cifra e geração de secret com o módulo `crypto` nativo. Nenhuma dependência nova | `package.json` |
 | `FDD-HIP-23` | A listagem de webhooks é paginada com `paginated()`. O histórico devolve sempre as 100 entregas mais recentes, no corpo `{ data: [...] }`, sem paginação | `src/shared/http/response.ts` |
 | `FDD-HIP-24` | Mover para a DLQ apaga a linha da outbox, na mesma transação que cria a linha da DLQ. O replay cria uma linha nova na outbox com o mesmo `eventId` e o mesmo payload, com `attempts = 0`, mesmo que o webhook esteja inativo, e marca a linha da DLQ com `replayedAt` e `replayedById`. Um segundo replay devolve 409. A resposta é 200, com corpo `{ deadLetterId, eventId, outboxId, status, replayedAt, replayedById }`. Sem listagem da DLQ por API, o id vem do log `webhook_dead_lettered` | [09:18] Diego |
 | `FDD-HIP-25` | O payload tem só os campos citados na reunião. "Campos básicos tipo `total_cents`" vira apenas `total_cents`, e o `timestamp` é o `new Date()` do momento da publicação, dentro da transação da mudança de status | [09:43] Diego |
-| `FDD-HIP-26` | `publishWebhookEvent` retorna `Promise<number>` com a quantidade de eventos gravados. É chamada depois de `orderStatusHistory.create`, e o filtro de status é feito em memória sobre os webhooks ativos do cliente. Fica em `webhook.publisher.ts` | [09:41] Bruno |
+| `FDD-HIP-26` | `publishWebhookEvent` retorna `Promise<number>` com a quantidade de eventos gravados. É chamada depois de `orderStatusHistory.create`, e o filtro de status é feito em memória sobre os webhooks ativos do cliente. Fica em `src/modules/webhooks/webhook.publisher.ts` (a criar) | [09:41] Bruno |
 
 ---
 
@@ -80,7 +80,7 @@ Hipóteses de implementação (todas **(hipótese)**):
 
 | ID | Objetivo | Medida ou invariante |
 | --- | --- | --- |
-| `FDD-OBJ-01` | Primeira tentativa rápida ([PRD-OBJ-01](./PRD.md#objetivos-e-métricas-de-sucesso)) | (`startedAt` da entrega com `attempt = 1`) menos (`createdAt` da linha da outbox), unidos por `outboxId`, fica abaixo de 10 s ([09:02] Marcos), com polling de 2 s ([09:10] Larissa). Exceção declarada: um evento que espera um evento anterior do mesmo par em retry (`FDD-HIP-09`) não cumpre essa meta. É uma divergência com o `PRD-CA-03`, aceita pela ordem por pedido e acompanhada à parte |
+| `FDD-OBJ-01` | Primeira tentativa rápida ([PRD-OBJ-01](./PRD.md#objetivos-e-métricas-de-sucesso)) | (`startedAt` da entrega com `attempt = 1`) menos (`createdAt` da linha da outbox), unidos por `outboxId`, fica abaixo de 10 s ([09:02] Marcos), com polling de 2 s ([09:10] Larissa). Exceção prevista no `PRD-CA-03`: um evento que espera um evento anterior do mesmo par em retry (`FDD-HIP-09`) não cumpre essa meta, porque a ordem por pedido é garantida ([09:13] Larissa) |
 | `FDD-OBJ-02` | Nenhuma mudança de status sem evento ([09:40] Bruno) | Para todo `changeStatus` commitado com webhook ativo interessado, existe linha na outbox. Se a inserção falhar, não existe mudança de status |
 | `FDD-OBJ-03` | Isolamento da mudança de status ([09:04] Bruno) | Nenhuma chamada HTTP dentro de `prisma.$transaction` do `changeStatus` |
 | `FDD-OBJ-04` | Política de retry exata | Até 6 chamadas por evento, com esperas de 60 s, 300 s, 1.800 s, 7.200 s e 43.200 s **(hipótese)** `FDD-HIP-01` |
@@ -95,7 +95,7 @@ Hipóteses de implementação (todas **(hipótese)**):
 **Incluído**
 - `FDD-ESC-01` Modelo de dados: `webhooks`, `webhook_outbox` ([09:06] Diego), `webhook_dead_letter` ([09:18] Diego) e `webhook_deliveries` **(hipótese)** `FDD-HIP-11`.
 - `FDD-ESC-02` A função `publishWebhookEvent`, chamada dentro do `changeStatus` ([09:41] Bruno).
-- `FDD-ESC-03` O worker `src/worker.ts`, com o script `npm run worker` ([09:11] Larissa).
+- `FDD-ESC-03` O worker `src/worker.ts` (a criar), com o script `npm run worker` ([09:11] Larissa).
 - `FDD-ESC-04` O CRUD de webhooks: criar, listar, editar e remover ([09:33] Bruno).
 - `FDD-ESC-05` A rotação de secret com 24 h de convivência ([09:21] Sofia).
 - `FDD-ESC-06` O histórico das últimas 100 entregas ([09:34] Marcos).
@@ -144,7 +144,7 @@ Os ids são `@default(uuid()) @db.Char(36)`, como no resto do schema ([09:51] La
 
 #### `FDD-FLUXO-02` Processamento pelo worker
 
-1. Ao iniciar, o `src/worker.ts` trata as linhas que ficaram em `PROCESSING`. A tentativa dessas linhas já foi contada antes do envio (passo 4), então elas voltam para `FAILED` com `nextAttemptAt = now`. Se já estiverem com `attempts = 6`, seguem para o `FDD-FLUXO-04` com motivo `WEBHOOK_MAX_ATTEMPTS_EXCEEDED`. O worker loga `webhook_processing_recovered` **(hipótese)** `FDD-HIP-10`.
+1. Ao iniciar, o `src/worker.ts` (a criar) trata as linhas que ficaram em `PROCESSING`. A tentativa dessas linhas já foi contada antes do envio (passo 4), então elas voltam para `FAILED` com `nextAttemptAt = now`. Se já estiverem com `attempts = 6`, seguem para o `FDD-FLUXO-04` com motivo `WEBHOOK_MAX_ATTEMPTS_EXCEEDED`. O worker loga `webhook_processing_recovered` **(hipótese)** `FDD-HIP-10`.
 2. A cada 2 s, em intervalo fixo de relógio que não espera os envios em andamento ([09:09] Diego) **(hipótese)** `FDD-HIP-21`, o worker calcula `now` em JS **(hipótese)** `FDD-HIP-16` e calcula as vagas livres: 10 menos os envios em andamento. Com zero vagas, pula o ciclo. A seleção e a marcação (passos 3 e 4) são serializadas por uma flag em memória: se a seleção do ciclo anterior ainda não terminou, o tick é ignorado, e a mesma linha nunca é selecionada duas vezes **(hipótese)** `FDD-HIP-21`.
 3. Busca as elegíveis com `$queryRaw`, numa única consulta, com o bloqueio por par antes do `LIMIT` **(hipótese)** `FDD-HIP-09`:
 
@@ -176,7 +176,7 @@ Os ids são `@default(uuid()) @db.Char(36)`, como no resto do schema ([09:51] La
 1. Na falha, grava `lastError` no formato `"<CÓDIGO>: <detalhe>"`, cortado em 500 caracteres. O código é `WEBHOOK_DELIVERY_TIMEOUT`, `WEBHOOK_DELIVERY_HTTP_ERROR` ou `WEBHOOK_DELIVERY_NETWORK_ERROR` **(hipótese)** `FDD-HIP-07`.
 2. Com `attempts` de 1 a 5 (já contado no passo 4 do `FDD-FLUXO-02`), marca `FAILED` e `nextAttemptAt = now + BACKOFF[attempts - 1]`. `BACKOFF` é 1m, 5m, 30m, 2h e 12h ([09:17] Larissa) **(hipótese)** `FDD-HIP-08`.
 3. Com `attempts` igual a 6, a política se esgotou e o evento segue para o `FDD-FLUXO-04` com motivo `WEBHOOK_MAX_ATTEMPTS_EXCEEDED` **(hipótese)** `FDD-HIP-01`.
-4. Este FDD adota 6 chamadas (`FDD-HIP-01`). A redação de [PRD-FR-08](./PRD.md#prd-fr-08-retentar-com-intervalo-crescente-e-separar-falhas-permanentes), `PRD-CA-08`, `RFC-PROP-02` e ADR-003 ("5 tentativas") não fecha com as "quase 15 horas entre primeira falha e última tentativa" ([09:17] Diego). A divergência está registrada para correção desses documentos. Se a revisão de design preferir 5 chamadas no total, o limite é uma constante e passa a usar só os quatro primeiros intervalos.
+4. A contagem de 6 chamadas (`FDD-HIP-01`) é a leitura confirmada e alinhada com o [PRD-FR-08](./PRD.md#prd-fr-08-retentar-com-intervalo-crescente-e-separar-falhas-permanentes): 5 novas tentativas depois da primeira falha, o que fecha com as "quase 15 horas entre primeira falha e última tentativa" ([09:17] Diego).
 
 | Chamada | Espera antes dela | Tempo acumulado desde a 1ª falha |
 | --- | --- | --- |
@@ -598,7 +598,7 @@ As classes novas ficam em `src/shared/errors/http-errors.ts` e são exportadas e
 #### 6.2 Estratégias de resiliência
 
 - `FDD-RES-01` **Timeout:** 10.000 ms por chamada, com `AbortSignal.timeout` ([09:42] Diego) **(hipótese)** `FDD-HIP-22`.
-- `FDD-RES-02` **Retries e backoff:** esperas fixas de 1m, 5m, 30m, 2h e 12h, sem jitter, que não foi discutido ([09:17] Larissa). São até 6 chamadas **(hipótese)** `FDD-HIP-01`. Não há retry indefinido ([09:15] Diego).
+- `FDD-RES-02` **Retries e backoff:** esperas fixas de 1m, 5m, 30m, 2h e 12h, sem jitter, que não foi discutido ([09:17] Larissa). São até 6 chamadas, a inicial e mais 5 novas tentativas, leitura confirmada e alinhada com o `PRD-FR-08` **(hipótese)** `FDD-HIP-01`. Não há retry indefinido ([09:15] Diego).
 - `FDD-RES-03` **Fallback:** a DLQ com replay manual é o único fallback ([09:18] Diego). E-mail ao cliente fica para a próxima fase (`PRD-FORA-01`).
 - `FDD-RES-04` **Circuit breaker:** não foi discutido na reunião e não faz parte desta entrega.
 - `FDD-RES-05` **Recuperação de `PROCESSING`:** no início do worker, essas linhas voltam para `FAILED` com retry imediato, com a tentativa já contada, ou vão para a DLQ se tiverem 6. Isso pode gerar reenvio, que é aceito pelo at-least-once ([09:24] Diego) **(hipótese)** `FDD-HIP-10`.
@@ -787,22 +787,22 @@ Observabilidade e regressão
 | `FDD-INT-01` | `src/modules/orders/order.service.ts` | `changeStatus` passa a publicar o evento | Importa `publishWebhookEvent` e o chama com `tx`, `order`, `from` e `to` logo depois do `tx.orderStatusHistory.create`, dentro do `this.prisma.$transaction` existente ([09:41] Bruno). O resto do método não muda |
 | `FDD-INT-02` | `src/app.ts` | Montagem do módulo | `buildControllers` cria `WebhookRepository`, `WebhookService` e `WebhookController` com o mesmo `prisma` e devolve `webhooks` em `Controllers` |
 | `FDD-INT-03` | `src/routes/index.ts` | Rotas novas no `buildApiRouter` | `router.use('/customers/:customerId/webhooks', ...)` antes de `/customers`; `router.use('/webhooks', ...)`; `router.use('/admin/webhooks', ...)`. O tipo `Controllers` ganha `webhooks` |
-| `FDD-INT-04` | `src/server.ts` | Não muda; serve de molde | O `src/worker.ts` copia o bootstrap: `logger`, handlers de `SIGINT` e `SIGTERM`, `prisma.$disconnect()` e `bootstrap_failed` ([09:11] Larissa) |
+| `FDD-INT-04` | `src/server.ts` | Não muda; serve de molde | O `src/worker.ts` (a criar) copia o bootstrap: `logger`, handlers de `SIGINT` e `SIGTERM`, `prisma.$disconnect()` e `bootstrap_failed` ([09:11] Larissa) |
 | `FDD-INT-05` | `src/config/database.ts` | Não muda | O worker importa `prisma` desse arquivo. Por ser outro processo, ganha a própria instância de `PrismaClient` com a mesma `DATABASE_URL` ([09:30] Bruno). A importação valida o `env` inteiro, então o worker usa o mesmo `.env` da API |
 | `FDD-INT-06` | `src/shared/errors/http-errors.ts` | Quatro classes novas | `WebhookNotFoundError`, `WebhookInvalidUrlError`, `WebhookDeadLetterNotFoundError` e `WebhookDeadLetterAlreadyReplayedError`, no molde de `InvalidStatusTransitionError`, exportadas em `src/shared/errors/index.ts` **(hipótese)** `FDD-HIP-13` |
 | `FDD-INT-07` | `src/middlewares/auth.middleware.ts` | Não muda | `authenticate` em todos os routers do módulo; `requireRole('ADMIN')` no router admin ([09:36] Larissa), antes do `validate`, então um usuário sem ADMIN recebe 403 mesmo com id inválido |
 | `FDD-INT-08` | `src/middlewares/error.middleware.ts` | Não muda | Trata as classes novas por serem `AppError` ([09:29] Bruno) |
 | `FDD-INT-09` | `src/shared/logger/index.ts` | `redactPaths` ganha os campos de secret | Inclui `secret`, `*.secret`, `*.previousSecret`, `*.secretCiphertext` e `*.previousSecrets` **(hipótese)** `FDD-HIP-14` |
 | `FDD-INT-10` | `prisma/schema.prisma` | Quatro models, um enum e uma relação | `Webhook`, `WebhookOutbox`, `WebhookDeadLetter`, `WebhookDelivery`, o enum `WebhookEventStatus` e `Customer.webhooks`, com migração nova gerada por `npm run db:migrate` |
-| `FDD-INT-11` | `package.json` | Scripts novos | `"worker": "node --env-file=.env dist/worker.js"` ([09:11] Larissa) e `"dev:worker": "tsx watch --env-file=.env src/worker.ts"` **(hipótese)** `FDD-HIP-21`. Nenhuma dependência nova |
+| `FDD-INT-11` | `package.json` | Scripts novos | `"worker": "node --env-file=.env dist/worker.js"` ([09:11] Larissa) e `"dev:worker": "tsx watch --env-file=.env src/worker.ts"` **(hipótese)** `FDD-HIP-21`. Os dois scripts apontam para o `src/worker.ts` (a criar). Nenhuma dependência nova |
 | `FDD-INT-12` | `tests/setup.ts` | Limpeza das tabelas novas | No `beforeEach`, apagar `webhookDelivery`, `webhookDeadLetter`, `webhookOutbox` e `webhook` antes de `customer` **(hipótese)** `FDD-HIP-16`. O arquivo não é alterado neste trabalho documental |
 | `FDD-INT-13` | `src/config/env.ts` | Variável nova | `WEBHOOK_SECRET_ENCRYPTION_KEY` obrigatória no `envSchema` (64 caracteres hex), usada pela API e pelo worker. O `.env.example` ganha a linha correspondente, e os testes a recebem pelo mesmo ambiente que já fornece `DATABASE_URL` e `JWT_SECRET`. Pendente da revisão da Sofia **(hipótese)** `FDD-HIP-14` |
 
-**Arquivos novos propostos** ([09:11] Larissa; [09:27] Bruno; [09:28] Bruno)
-- `src/worker.ts`: ponto de entrada do worker.
-- `src/modules/webhooks/webhook.routes.ts`: três builders, para as rotas aninhadas no cliente, as rotas por id e as rotas admin.
-- `src/modules/webhooks/webhook.controller.ts`, `webhook.service.ts`, `webhook.repository.ts` e `webhook.schemas.ts`: no padrão de módulo.
-- `src/modules/webhooks/webhook.publisher.ts`: `publishWebhookEvent` **(hipótese)** `FDD-HIP-26`.
-- `src/modules/webhooks/webhook.worker.ts`: `processBatch()` e o loop de polling **(hipótese)** `FDD-HIP-21`.
-- `src/modules/webhooks/webhook.signature.ts`: HMAC, geração e cifra da secret **(hipótese)** `FDD-HIP-14`.
-- `tests/webhooks.test.ts`: testes de integração **(hipótese)** `FDD-HIP-16`.
+**Arquivos novos, a criar na implementação** (nenhum deles existe ainda no repositório; [09:11] Larissa; [09:27] Bruno; [09:28] Bruno)
+- `src/worker.ts` (a criar): ponto de entrada do worker.
+- `src/modules/webhooks/webhook.routes.ts` (a criar): três builders, para as rotas aninhadas no cliente, as rotas por id e as rotas admin.
+- `src/modules/webhooks/webhook.controller.ts` (a criar), `src/modules/webhooks/webhook.service.ts` (a criar), `src/modules/webhooks/webhook.repository.ts` (a criar) e `src/modules/webhooks/webhook.schemas.ts` (a criar): no padrão de módulo.
+- `src/modules/webhooks/webhook.publisher.ts` (a criar): `publishWebhookEvent` **(hipótese)** `FDD-HIP-26`.
+- `src/modules/webhooks/webhook.worker.ts` (a criar): `processBatch()` e o loop de polling **(hipótese)** `FDD-HIP-21`.
+- `src/modules/webhooks/webhook.signature.ts` (a criar): HMAC, geração e cifra da secret **(hipótese)** `FDD-HIP-14`.
+- `tests/webhooks.test.ts` (a criar): testes de integração **(hipótese)** `FDD-HIP-16`.

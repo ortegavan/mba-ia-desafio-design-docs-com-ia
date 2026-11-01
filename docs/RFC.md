@@ -56,7 +56,7 @@ O worker é um processo separado da API, como entrada nova no mesmo projeto ([09
 
 Cada envio é assinado com HMAC-SHA256 sobre o corpo, com a secret do endpoint ([09:22] Sofia), e leva um identificador único do evento ([09:25] Diego).
 
-Na falha, são até 5 tentativas com backoff exponencial ([09:17] Larissa), em cerca de 15 horas ([09:17] Diego). Depois o evento vai para uma dead letter separada da outbox, com payload, motivo e horário ([09:18] Diego).
+Na falha, são 5 novas tentativas com backoff exponencial ([09:17] Larissa), em cerca de 15 horas ([09:17] Diego). Depois o evento vai para uma dead letter separada da outbox, com payload, motivo e horário ([09:18] Diego).
 
 Decisões: [ADR-002](./adrs/ADR-002-worker-separado-com-polling.md), [ADR-003](./adrs/ADR-003-retry-com-backoff-e-dlq.md), [ADR-004](./adrs/ADR-004-hmac-sha256-com-secret-por-endpoint.md), [ADR-005](./adrs/ADR-005-entrega-at-least-once-com-x-event-id.md).
 
