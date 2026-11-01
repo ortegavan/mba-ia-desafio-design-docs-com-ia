@@ -139,3 +139,102 @@ Esta tabela liga cada item dos design docs à origem dele: uma fala da reunião 
 | PRD-TEST-03 | docs/PRD.md | Teste | Suíte de integração existente de pedidos continua passando | CODIGO | tests/orders.test.ts |
 | PRD-TEST-04 | docs/PRD.md | Teste | Revisão do desenho por Larissa, Bruno e Diego antes de codar | TRANSCRICAO | [09:50] Larissa |
 | PRD-TEST-05 | docs/PRD.md | Teste | Revisão de segurança antes do deploy, incluída nas três sprints | TRANSCRICAO | [09:47] Larissa; [09:46] Sofia |
+| ADR-001-CTX-01 | docs/adrs/ADR-001-outbox-no-mysql.md | Contexto | Não pode existir status mudado sem evento | TRANSCRICAO | [09:40] Bruno |
+| ADR-001-CTX-02 | docs/adrs/ADR-001-outbox-no-mysql.md | Contexto | Transação de status já é pesada; HTTP dentro travaria outros pedidos | TRANSCRICAO | [09:04] Bruno |
+| ADR-001-CTX-03 | docs/adrs/ADR-001-outbox-no-mysql.md | Contexto | Cliente fora do ar não pode desfazer a mudança de status | TRANSCRICAO | [09:04] Bruno |
+| ADR-001-CTX-04 | docs/adrs/ADR-001-outbox-no-mysql.md | Contexto | Time pequeno; infraestrutura nova seria excesso | TRANSCRICAO | [09:07] Diego |
+| ADR-001-COD-01 | docs/adrs/ADR-001-outbox-no-mysql.md | Referência ao Código | changeStatus roda em this.prisma.$transaction com pedido, histórico e estoque | CODIGO | src/modules/orders/order.service.ts |
+| ADR-001-COD-02 | docs/adrs/ADR-001-outbox-no-mysql.md | Referência ao Código | Datasource da aplicação já é MySQL | CODIGO | prisma/schema.prisma |
+| ADR-001 | docs/adrs/ADR-001-outbox-no-mysql.md | Decisão | Outbox no MySQL existente, gravada na transação do changeStatus, com rollback se falhar | TRANSCRICAO | [09:08] Larissa; [09:40] Bruno |
+| ADR-001-ALT-01 | docs/adrs/ADR-001-outbox-no-mysql.md | Alternativa Descartada | Disparo síncrono no changeStatus | TRANSCRICAO | [09:04] Bruno; [09:03] Larissa |
+| ADR-001-ALT-02 | docs/adrs/ADR-001-outbox-no-mysql.md | Alternativa Descartada | Redis Streams ou fila em infraestrutura nova | TRANSCRICAO | [09:07] Diego; [09:07] Larissa |
+| ADR-001-POS-01 | docs/adrs/ADR-001-outbox-no-mysql.md | Consequência Positiva | Sem inconsistência possível entre pedido e evento | TRANSCRICAO | [09:06] Diego |
+| ADR-001-POS-02 | docs/adrs/ADR-001-outbox-no-mysql.md | Consequência Positiva | Nenhuma infraestrutura nova | TRANSCRICAO | [09:07] Diego |
+| ADR-001-POS-03 | docs/adrs/ADR-001-outbox-no-mysql.md | Consequência Positiva | Filtro de status na inserção economiza linhas | TRANSCRICAO | [09:34] Bruno; [09:34] Diego |
+| ADR-001-POS-04 | docs/adrs/ADR-001-outbox-no-mysql.md | Consequência Positiva | Integração por função que recebe o tx, sem injetar repository | TRANSCRICAO | [09:41] Diego; [09:41] Bruno |
+| ADR-001-NEG-01 | docs/adrs/ADR-001-outbox-no-mysql.md | Consequência Negativa | Outbox cresce; arquivamento fora do escopo | TRANSCRICAO | [09:08] Diego |
+| ADR-001-NEG-02 | docs/adrs/ADR-001-outbox-no-mysql.md | Consequência Negativa | Falha ao inserir o evento desfaz a mudança de status | TRANSCRICAO | [09:40] Bruno |
+| ADR-001-NEG-03 | docs/adrs/ADR-001-outbox-no-mysql.md | Consequência Negativa | changeStatus passa a depender do módulo de webhooks | TRANSCRICAO | [09:41] Bruno |
+| ADR-002-CTX-01 | docs/adrs/ADR-002-worker-separado-com-polling.md | Contexto | Abaixo de 10 s já é tempo real para os clientes | TRANSCRICAO | [09:02] Marcos |
+| ADR-002-CTX-02 | docs/adrs/ADR-002-worker-separado-com-polling.md | Contexto | Algum processo precisa ler a outbox e disparar o HTTP | TRANSCRICAO | [09:06] Diego |
+| ADR-002-CTX-03 | docs/adrs/ADR-002-worker-separado-com-polling.md | Contexto | MySQL não tem LISTEN/NOTIFY; trigger não notifica processo externo | TRANSCRICAO | [09:09] Diego |
+| ADR-002-CTX-04 | docs/adrs/ADR-002-worker-separado-com-polling.md | Contexto | Worker dentro da API morre quando a API reinicia | TRANSCRICAO | [09:11] Diego |
+| ADR-002-COD-01 | docs/adrs/ADR-002-worker-separado-com-polling.md | Referência ao Código | src/server.ts é hoje o único ponto de entrada | CODIGO | src/server.ts |
+| ADR-002-COD-02 | docs/adrs/ADR-002-worker-separado-com-polling.md | Referência ao Código | createPrismaClient cria instância nova; worker usa a sua | CODIGO | src/config/database.ts |
+| ADR-002-COD-03 | docs/adrs/ADR-002-worker-separado-com-polling.md | Referência ao Código | Scripts atuais só sobem a API | CODIGO | package.json |
+| ADR-002 | docs/adrs/ADR-002-worker-separado-com-polling.md | Decisão | Worker em processo separado, polling de 2 s, único worker | TRANSCRICAO | [09:10] Larissa; [09:11] Diego |
+| ADR-002-ALT-01 | docs/adrs/ADR-002-worker-separado-com-polling.md | Alternativa Descartada | Trigger no banco para acordar o worker | TRANSCRICAO | [09:09] Diego; [09:09] Bruno |
+| ADR-002-ALT-02 | docs/adrs/ADR-002-worker-separado-com-polling.md | Alternativa Descartada | Worker dentro do processo da API | TRANSCRICAO | [09:11] Diego |
+| ADR-002-POS-01 | docs/adrs/ADR-002-worker-separado-com-polling.md | Consequência Positiva | Polling de 2 s atende o abaixo de 10 s | TRANSCRICAO | [09:09] Diego; [09:10] Marcos |
+| ADR-002-POS-02 | docs/adrs/ADR-002-worker-separado-com-polling.md | Consequência Positiva | Reinício da API não interrompe o envio | TRANSCRICAO | [09:11] Diego |
+| ADR-002-POS-03 | docs/adrs/ADR-002-worker-separado-com-polling.md | Consequência Positiva | Único worker processa em ordem de criação; ordem por pedido | TRANSCRICAO | [09:12] Diego |
+| ADR-002-POS-04 | docs/adrs/ADR-002-worker-separado-com-polling.md | Consequência Positiva | Mesma stack e mesmo banco | TRANSCRICAO | [09:11] Diego |
+| ADR-002-NEG-01 | docs/adrs/ADR-002-worker-separado-com-polling.md | Consequência Negativa | Até 2 s de espera no pior caso, aceito | TRANSCRICAO | [09:10] Larissa |
+| ADR-002-NEG-02 | docs/adrs/ADR-002-worker-separado-com-polling.md | Consequência Negativa | Sem ordem global; limitação conhecida | TRANSCRICAO | [09:13] Larissa |
+| ADR-002-NEG-03 | docs/adrs/ADR-002-worker-separado-com-polling.md | Consequência Negativa | Escalar exige particionar por pedido ou lock pessimista | TRANSCRICAO | [09:13] Diego; [09:12] Diego |
+| ADR-002-NEG-04 | docs/adrs/ADR-002-worker-separado-com-polling.md | Consequência Negativa | Mais um processo, com script e PrismaClient próprios | TRANSCRICAO | [09:30] Bruno; [09:11] Larissa |
+| ADR-003-CTX-01 | docs/adrs/ADR-003-retry-com-backoff-e-dlq.md | Contexto | Cliente pode estar offline no envio | TRANSCRICAO | [09:14] Larissa |
+| ADR-003-CTX-02 | docs/adrs/ADR-003-retry-com-backoff-e-dlq.md | Contexto | Já houve cliente 2 h fora em manutenção planejada | TRANSCRICAO | [09:16] Diego |
+| ADR-003-CTX-03 | docs/adrs/ADR-003-retry-com-backoff-e-dlq.md | Contexto | Sem resposta em 10 s conta como falha e vai para retry | TRANSCRICAO | [09:42] Diego |
+| ADR-003-CTX-04 | docs/adrs/ADR-003-retry-com-backoff-e-dlq.md | Contexto | Evento falho precisa ficar disponível para debug e reprocessamento | TRANSCRICAO | [09:18] Diego |
+| ADR-003 | docs/adrs/ADR-003-retry-com-backoff-e-dlq.md | Decisão | 5 tentativas 1m/5m/30m/2h/12h, dead letter separada e replay manual | TRANSCRICAO | [09:17] Larissa; [09:18] Diego |
+| ADR-003-ALT-01 | docs/adrs/ADR-003-retry-com-backoff-e-dlq.md | Alternativa Descartada | Retry indefinido com backoff | TRANSCRICAO | [09:15] Diego |
+| ADR-003-ALT-02 | docs/adrs/ADR-003-retry-com-backoff-e-dlq.md | Alternativa Descartada | 3 tentativas | TRANSCRICAO | [09:16] Diego; [09:16] Bruno |
+| ADR-003-ALT-03 | docs/adrs/ADR-003-retry-com-backoff-e-dlq.md | Alternativa Descartada | Marcar failed na própria outbox | TRANSCRICAO | [09:18] Diego; [09:17] Larissa |
+| ADR-003-POS-01 | docs/adrs/ADR-003-retry-com-backoff-e-dlq.md | Consequência Positiva | Cobre indisponibilidades longas como a de 2 h | TRANSCRICAO | [09:16] Diego |
+| ADR-003-POS-02 | docs/adrs/ADR-003-retry-com-backoff-e-dlq.md | Consequência Positiva | Nenhum evento pendurado para sempre | TRANSCRICAO | [09:15] Diego |
+| ADR-003-POS-03 | docs/adrs/ADR-003-retry-com-backoff-e-dlq.md | Consequência Positiva | Outbox mais limpa e DLQ como evidência | TRANSCRICAO | [09:18] Diego |
+| ADR-003-NEG-01 | docs/adrs/ADR-003-retry-com-backoff-e-dlq.md | Consequência Negativa | Cliente fora por mais de cerca de 15 h deixa de receber automaticamente | TRANSCRICAO | [09:17] Marcos |
+| ADR-003-NEG-02 | docs/adrs/ADR-003-retry-com-backoff-e-dlq.md | Consequência Negativa | Sair da DLQ depende de ação manual de admin | TRANSCRICAO | [09:18] Diego |
+| ADR-003-NEG-03 | docs/adrs/ADR-003-retry-com-backoff-e-dlq.md | Consequência Negativa | Evento pode levar cerca de 15 h até entrega ou falha | TRANSCRICAO | [09:17] Diego |
+| ADR-004-CTX-01 | docs/adrs/ADR-004-hmac-sha256-com-secret-por-endpoint.md | Contexto | Dados de pedidos saem da infra; cliente valida origem e integridade | TRANSCRICAO | [09:19] Sofia |
+| ADR-004-CTX-02 | docs/adrs/ADR-004-hmac-sha256-com-secret-por-endpoint.md | Contexto | Cliente já vazou secret em log | TRANSCRICAO | [09:22] Diego |
+| ADR-004-CTX-03 | docs/adrs/ADR-004-hmac-sha256-com-secret-por-endpoint.md | Contexto | https obrigatório é validação, não decisão arquitetural | TRANSCRICAO | [09:23] Sofia |
+| ADR-004 | docs/adrs/ADR-004-hmac-sha256-com-secret-por-endpoint.md | Decisão | HMAC-SHA256 do corpo em X-Signature, secret por endpoint, rotação com 24 h | TRANSCRICAO | [09:22] Sofia; [09:20] Sofia |
+| ADR-004-ALT-01 | docs/adrs/ADR-004-hmac-sha256-com-secret-por-endpoint.md | Alternativa Descartada | Secret global da plataforma | TRANSCRICAO | [09:21] Sofia |
+| ADR-004-POS-01 | docs/adrs/ADR-004-hmac-sha256-com-secret-por-endpoint.md | Consequência Positiva | Cliente valida origem e integridade | TRANSCRICAO | [09:19] Sofia |
+| ADR-004-POS-02 | docs/adrs/ADR-004-hmac-sha256-com-secret-por-endpoint.md | Consequência Positiva | Padrão de mercado com bibliotecas disponíveis | TRANSCRICAO | [09:20] Sofia |
+| ADR-004-POS-03 | docs/adrs/ADR-004-hmac-sha256-com-secret-por-endpoint.md | Consequência Positiva | Vazamento atinge só um endpoint | TRANSCRICAO | [09:21] Sofia |
+| ADR-004-POS-04 | docs/adrs/ADR-004-hmac-sha256-com-secret-por-endpoint.md | Consequência Positiva | 24 h de convivência para o cliente migrar | TRANSCRICAO | [09:21] Sofia |
+| ADR-004-NEG-01 | docs/adrs/ADR-004-hmac-sha256-com-secret-por-endpoint.md | Consequência Negativa | Cliente implementa a verificação | TRANSCRICAO | [09:20] Sofia |
+| ADR-004-NEG-02 | docs/adrs/ADR-004-hmac-sha256-com-secret-por-endpoint.md | Consequência Negativa | Revisão de segurança de 2 dias úteis antes do deploy | TRANSCRICAO | [09:46] Sofia |
+| ADR-004-NEG-03 | docs/adrs/ADR-004-hmac-sha256-com-secret-por-endpoint.md | Consequência Negativa | Só 24 h para migrar após rotacionar | TRANSCRICAO | [09:21] Sofia |
+| ADR-005-CTX-01 | docs/adrs/ADR-005-entrega-at-least-once-com-x-event-id.md | Contexto | Mesmo evento pode chegar duas vezes | TRANSCRICAO | [09:24] Diego |
+| ADR-005-CTX-02 | docs/adrs/ADR-005-entrega-at-least-once-com-x-event-id.md | Contexto | Cliente precisa reconhecer duplicados | TRANSCRICAO | [09:25] Bruno |
+| ADR-005-COD-01 | docs/adrs/ADR-005-entrega-at-least-once-com-x-event-id.md | Referência ao Código | Ids do projeto são UUID | CODIGO | prisma/schema.prisma |
+| ADR-005 | docs/adrs/ADR-005-entrega-at-least-once-com-x-event-id.md | Decisão | At-least-once com UUID por evento no X-Event-Id | TRANSCRICAO | [09:26] Larissa; [09:25] Diego |
+| ADR-005-ALT-01 | docs/adrs/ADR-005-entrega-at-least-once-com-x-event-id.md | Alternativa Descartada | Exactly-once | TRANSCRICAO | [09:25] Diego |
+| ADR-005-POS-01 | docs/adrs/ADR-005-entrega-at-least-once-com-x-event-id.md | Consequência Positiva | Padrão de mercado (Stripe, GitHub) | TRANSCRICAO | [09:25] Diego |
+| ADR-005-POS-02 | docs/adrs/ADR-005-entrega-at-least-once-com-x-event-id.md | Consequência Positiva | Sem coordenação entre os dois lados | TRANSCRICAO | [09:25] Diego |
+| ADR-005-NEG-01 | docs/adrs/ADR-005-entrega-at-least-once-com-x-event-id.md | Consequência Negativa | Cliente pode receber duplicado e precisa estar preparado | TRANSCRICAO | [09:24] Diego |
+| ADR-005-NEG-02 | docs/adrs/ADR-005-entrega-at-least-once-com-x-event-id.md | Consequência Negativa | Responsabilidade da dedup vai para o cliente | TRANSCRICAO | [09:25] Sofia |
+| ADR-005-NEG-03 | docs/adrs/ADR-005-entrega-at-least-once-com-x-event-id.md | Consequência Negativa | Documentação destacada no portal obrigatória | TRANSCRICAO | [09:26] Marcos |
+| ADR-006-CTX-01 | docs/adrs/ADR-006-reuso-dos-padroes-do-projeto.md | Contexto | Padrão de módulo: controller, service, repository, routes, schemas | TRANSCRICAO | [09:27] Bruno |
+| ADR-006-CTX-02 | docs/adrs/ADR-006-reuso-dos-padroes-do-projeto.md | Contexto | Time pequeno e prazo de três sprints | TRANSCRICAO | [09:47] Larissa; [09:07] Diego |
+| ADR-006-CTX-03 | docs/adrs/ADR-006-reuso-dos-padroes-do-projeto.md | Contexto | JWT atual é do usuário operador, não do cliente | TRANSCRICAO | [09:32] Bruno |
+| ADR-006-COD-01 | docs/adrs/ADR-006-reuso-dos-padroes-do-projeto.md | Referência ao Código | Rotas do módulo de pedidos com authenticate e validate Zod | CODIGO | src/modules/orders/order.routes.ts |
+| ADR-006-COD-02 | docs/adrs/ADR-006-reuso-dos-padroes-do-projeto.md | Referência ao Código | AppError com statusCode, errorCode e details | CODIGO | src/shared/errors/app-error.ts |
+| ADR-006-COD-03 | docs/adrs/ADR-006-reuso-dos-padroes-do-projeto.md | Referência ao Código | InvalidStatusTransitionError e InsufficientStockError com códigos | CODIGO | src/shared/errors/http-errors.ts |
+| ADR-006-COD-04 | docs/adrs/ADR-006-reuso-dos-padroes-do-projeto.md | Referência ao Código | Error middleware trata AppError, ZodError e Prisma | CODIGO | src/middlewares/error.middleware.ts |
+| ADR-006-COD-05 | docs/adrs/ADR-006-reuso-dos-padroes-do-projeto.md | Referência ao Código | authenticate, requireRole e JwtPayload com sub, email e role | CODIGO | src/middlewares/auth.middleware.ts |
+| ADR-006-COD-06 | docs/adrs/ADR-006-reuso-dos-padroes-do-projeto.md | Referência ao Código | Logger Pino com redação de campos sensíveis | CODIGO | src/shared/logger/index.ts |
+| ADR-006-COD-07 | docs/adrs/ADR-006-reuso-dos-padroes-do-projeto.md | Referência ao Código | Ids UUID e UserRole com ADMIN e OPERATOR | CODIGO | prisma/schema.prisma |
+| ADR-006 | docs/adrs/ADR-006-reuso-dos-padroes-do-projeto.md | Decisão | Módulo de webhooks no padrão existente, com reuso de erros, logs, Zod, requireRole e UUID | TRANSCRICAO | [09:30] Larissa; [09:36] Larissa |
+| ADR-006-ALT-01 | docs/adrs/ADR-006-reuso-dos-padroes-do-projeto.md | Alternativa Descartada | customer_id implícito do JWT | TRANSCRICAO | [09:32] Larissa; [09:31] Marcos |
+| ADR-006-ALT-02 | docs/adrs/ADR-006-reuso-dos-padroes-do-projeto.md | Alternativa Descartada | Id autoincremental na outbox | TRANSCRICAO | [09:51] Larissa; [09:51] Diego |
+| ADR-006-POS-01 | docs/adrs/ADR-006-reuso-dos-padroes-do-projeto.md | Consequência Positiva | Error middleware pega os erros sem mudança | TRANSCRICAO | [09:29] Bruno |
+| ADR-006-POS-02 | docs/adrs/ADR-006-reuso-dos-padroes-do-projeto.md | Consequência Positiva | Nenhuma dependência nova de log | TRANSCRICAO | [09:29] Bruno |
+| ADR-006-POS-03 | docs/adrs/ADR-006-reuso-dos-padroes-do-projeto.md | Consequência Positiva | Replay protegido pelo requireRole existente | TRANSCRICAO | [09:36] Larissa |
+| ADR-006-POS-04 | docs/adrs/ADR-006-reuso-dos-padroes-do-projeto.md | Consequência Positiva | Outbox com UUID, como as outras tabelas | TRANSCRICAO | [09:51] Larissa |
+| ADR-006-NEG-01 | docs/adrs/ADR-006-reuso-dos-padroes-do-projeto.md | Consequência Negativa | CRUD aberto a qualquer autenticado; endurecer depois | TRANSCRICAO | [09:37] Sofia |
+| ADR-006-NEG-02 | docs/adrs/ADR-006-reuso-dos-padroes-do-projeto.md | Consequência Negativa | customer_id informado explicitamente no body ou path | TRANSCRICAO | [09:32] Larissa |
+| ADR-006-NEG-03 | docs/adrs/ADR-006-reuso-dos-padroes-do-projeto.md | Consequência inferida | Token não liga usuário a cliente; API não restringe o cliente gerenciado | TRANSCRICAO | [09:32] Larissa |
+| ADR-007-CTX-01 | docs/adrs/ADR-007-snapshot-do-payload-na-insercao.md | Contexto | Tempo entre mudança e envio: até 2 s, ou cerca de 15 h com retries | TRANSCRICAO | [09:10] Larissa; [09:17] Diego |
+| ADR-007-CTX-02 | docs/adrs/ADR-007-snapshot-do-payload-na-insercao.md | Contexto | O pedido pode mudar nesse intervalo | TRANSCRICAO | [09:52] Larissa |
+| ADR-007-CTX-03 | docs/adrs/ADR-007-snapshot-do-payload-na-insercao.md | Contexto | Payload enxuto, sem itens | TRANSCRICAO | [09:43] Diego |
+| ADR-007-COD-01 | docs/adrs/ADR-007-snapshot-do-payload-na-insercao.md | Referência ao Código | changeStatus relê o pedido completo dentro da transação | CODIGO | src/modules/orders/order.service.ts |
+| ADR-007 | docs/adrs/ADR-007-snapshot-do-payload-na-insercao.md | Decisão | Payload renderizado e gravado na inserção na outbox | TRANSCRICAO | [09:52] Larissa; [09:52] Bruno |
+| ADR-007-ALT-01 | docs/adrs/ADR-007-snapshot-do-payload-na-insercao.md | Alternativa Descartada | Guardar só order_id e renderizar no envio | TRANSCRICAO | [09:52] Larissa; [09:51] Bruno |
+| ADR-007-POS-01 | docs/adrs/ADR-007-snapshot-do-payload-na-insercao.md | Consequência Positiva | Evento reflete o pedido no momento da mudança | TRANSCRICAO | [09:52] Larissa |
+| ADR-007-POS-02 | docs/adrs/ADR-007-snapshot-do-payload-na-insercao.md | Consequência Positiva | Replay da DLQ reenvia o mesmo conteúdo | TRANSCRICAO | [09:18] Diego |
+| ADR-007-NEG-01 | docs/adrs/ADR-007-snapshot-do-payload-na-insercao.md | Consequência inferida | Cada linha guarda o payload completo; outbox cresce mais | TRANSCRICAO | [09:52] Larissa |
